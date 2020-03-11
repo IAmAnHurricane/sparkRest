@@ -50,7 +50,7 @@ public class AccountsController {
 					get("", this::getAccountById, gson::toJson);
 					delete("", this::deleteAccount);
 					get("/state", this::getAccountState, gson::toJson);
-					put("/state", this::setAccountState);
+					put("/state", this::setAccountState, gson::toJson);
 					post("/transfers", this::transfer, gson::toJson);
 				});
 			});
