@@ -1,0 +1,239 @@
+swagger: "2.0"
+info:
+  description: "Example of a REST API used to manage an account and perform a transfers between accounts"
+  version: "1.0.0"
+  title: "money transfer api example"
+  contact:
+    email: "lukasz.barcik@gmail.com"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "localhost:8008"
+basePath: "/api/v1"
+tags:
+- name: "account"
+  description: "managing accounts, including the transfer"
+schemes:
+- "http"
+paths:
+  /accounts:
+    post:
+      tags:
+      - "account"
+      summary: "Create a new account"
+      description: ""
+      operationId: "createAccount"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Amount the account to be created with"
+        required: false
+        schema:
+          $ref: "#/definitions/NewAccountRequest"
+      responses:
+        400:
+          description: "Invalid json document in body"
+        201:
+          description: "Created. The account was created; The url to a newly created account is in the 'Location' header"
+  /accounts/{accountId}:
+    get:
+      tags:
+      - "account"
+      summary: "Find account by ID"
+      description: "Returns an account summary"
+      operationId: "getAccountById"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "accountId"
+        in: "path"
+        description: "ID of an account to return"
+        required: true
+        type: "string"
+        format: "uuid"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/AccountSummary"
+        404:
+          description: "Account not found"
+    delete:
+      tags:
+      - "account"
+      summary: "Deletes an account"
+      description: "PLease note, that in order to delete and account it has to be locked (will not accept transfers) and the available amount has to be zeroed."
+      operationId: "deleteAccount"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "accountId"
+        in: "path"
+        required: true
+        type: "string"
+        format: "uuid"
+      responses:
+        404:
+          description: "Account not found"
+        409:
+          description: "The account is either not locked or not zeroed or both."
+        200:
+          description: "Account deleted"
+  /accounts/{accountId}/state:
+    get:
+      tags:
+      - "account"
+      summary: "Gets current account state"
+      description: ""
+      operationId: "getAccountState"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "accountId"
+        in: "path"
+        description: "ID of the account to get the state of"
+        required: true
+        type: "string"
+        format: "uuid"
+      responses:
+        404:
+          description: "Requested account not found"
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/AccountState"
+    put:
+      tags:
+      - "account"
+      summary: "Allows locking and unlocking an account"
+      description: ""
+      operationId: "setAccountState"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "accountId"
+        in: "path"
+        description: "ID of the account to set the state of"
+        required: true
+        type: "string"
+        format: "uuid"
+      - in: "body"
+        name: "body"
+        description: "Pet object that needs to be added to the store"
+        required: true
+        schema:
+          $ref: "#/definitions/AccountState"
+      responses:
+        400:
+          description: "Body is not a valid JSON document"
+        404:
+          description: "Requested account not found"
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/AccountState"
+  /accounts/{accountId}/transfers:
+    post:
+      tags:
+      - "account"
+      summary: "Used to perform a transfer between accounts"
+      description: ""
+      operationId: "transfer"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "accountId"
+        in: "path"
+        description: "ID of the account to set the state of"
+        required: true
+        type: "string"
+        format: "uuid"
+      - in: "body"
+        name: "body"
+        description: "Pet object that needs to be added to the store"
+        required: true
+        schema:
+          $ref: "#/definitions/IncomingTransferRequest"
+      responses:
+        404:
+          description: "Requested account not found"
+        400:
+          description: "Body is not a valid JSON document"
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/TransferResult"
+definitions:
+  NewAccountRequest:
+    type: "object"
+    required:
+    - "amount"
+    properties:
+      amount:
+        type: "number"
+        format: "double"
+  AccountSummary:
+    type: "object"
+    required:
+      - "id"
+      - "available"
+      - "blocked"
+      - "isLocked"
+    properties:
+      id:
+        type: "string"
+        format: "uuid"
+      available:
+        type: "number"
+        format: double
+      blocked:
+        type: "number"
+        format: double
+      isLocked:
+        type: "boolean"
+        format: boolean
+  AccountState:
+    type: "object"
+    required: 
+    - "locked"
+    properties:
+      locked:
+        type: "boolean"
+  IncomingTransferRequest:
+    type: "object"
+    required: 
+    - "destinationAccount"
+    - "amount"
+    properties:
+      destinationAccount:
+        type: "string"
+        format: "uuid"
+      amount:
+        type: "number"
+        format: "double"
+  TransferResult:
+    type: "object"
+    required:
+    - "success"
+    - "code"
+    - "message"
+    properties:
+      success:
+        type: "boolean"
+      code:
+        type: "number"
+        format: "integer"
+        description: |
+          possible values are:
+          0 - success
+          1 - source account does not have enough resources
+          2 - destination account locked
+          3 - destination account not found 
+          4 - provided amount to transfer is less or equal zero 
+      message:
+        type: "string"
+        format: "text"
